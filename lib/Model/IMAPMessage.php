@@ -53,7 +53,6 @@ use OCA\Mail\Service\Html;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\Files\File;
 use OCP\Files\SimpleFS\ISimpleFile;
-use ValueError;
 use function in_array;
 use function mb_convert_encoding;
 use function mb_strcut;
@@ -622,23 +621,29 @@ class IMAPMessage implements IMessage, JsonSerializable {
 		$p->setContents($data);
 		$data = $p->getContents();
 
-		$charset = mb_detect_encoding($data, 'UTF-8', true);
-
-		if (!$charset) {
-			$charset = $p->getCharset();
+		if (empty($data)) {
+			return $data;
 		}
 
-		try {
-			$data = @mb_convert_encoding($data, 'UTF-8', $charset);
-		} catch (ValueError $e) {
-			throw new ServiceException('Could not detect charset for message ' . $e->getMessage(), $e->getCode());
+		// Try the email encoding first
+		$converted = @mb_convert_encoding($data, 'UTF-8', $p->getCharset());
+		if ($converted) {
+			return $converted;
 		}
 
-		if (!$data) {
-			throw new ServiceException('Could not detect charset for message');
+		// Fallback
+		$charset = mb_detect_encoding($data, null, true);
+		$converted = @mb_convert_encoding($data, 'UTF-8', $charset);
+		if ($converted) {
+			return $converted;
 		}
 
-		return $data;
+		// Might be a charset that PHP mb doesn't know how to handle, fall back to iconv
+		$converted = iconv($charset, 'UTF-8', $data);
+		if ($converted === false) {
+			throw new ServiceException('Could not detect message charset');
+		}
+		return $converted;
 	}
 
 	public function getContent(): string {
