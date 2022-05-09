@@ -181,21 +181,27 @@ export default {
 		}
 		removeRec(account)
 	},
-	showMessageComposer(state, { type, data, forwardedMessages }) {
-		Vue.set(state, 'newMessage', {
+	startComposerSession(state, { type, data, forwardedMessages }) {
+		state.newMessage = {
 			type,
 			data,
 			options: {
 				forwardedMessages,
 			},
-		})
+		}
+	},
+	stopComposerSession(state) {
+		state.newMessage = undefined
 	},
 	convertComposerMessageToOutbox(state, { message }) {
 		Vue.set(state.newMessage, 'type', 'outbox')
 		Vue.set(state.newMessage.data, 'id', message.id)
 	},
+	showMessageComposer(state) {
+		state.showMessageComposer = true
+	},
 	hideMessageComposer(state) {
-		Vue.delete(state, 'newMessage')
+		state.showMessageComposer = false
 	},
 	addEnvelope(state, { query, envelope, addToUnifiedMailboxes = true }) {
 		normalizeTags(state, envelope)
@@ -365,5 +371,9 @@ export default {
 	},
 	setScheduledSendingDisabled(state, value) {
 		state.isScheduledSendingDisabled = value
+	},
+	patchComposerData(state, data) {
+		console.log('patchComposerData', { current: JSON.stringify(state.newMessage.data), new: JSON.stringify(data) })
+		Vue.set(state.newMessage, 'data', Object.assign(state.newMessage.data, data))
 	},
 }

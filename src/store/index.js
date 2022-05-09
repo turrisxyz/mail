@@ -90,6 +90,7 @@ export default new Vuex.Store({
 				envelopes: {},
 				messages: {},
 				newMessage: undefined,
+				showMessageComposer: false,
 				autocompleteEntries: [],
 				tags: {},
 				tagList: [],

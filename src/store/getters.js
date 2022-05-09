@@ -55,7 +55,9 @@ export const getters = {
 		)
 	},
 	showMessageComposer: (state) => {
-		return state.newMessage !== undefined
+		const val = state.newMessage !== undefined && state.showMessageComposer
+		console.log('mesComp', { val })
+		return val
 	},
 	composerMessage: (state) => {
 		return state.newMessage

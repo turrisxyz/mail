@@ -265,7 +265,12 @@ export default {
 			updated,
 		})
 	},
-	async showMessageComposer({ commit, dispatch, getters }, { type = 'imap', data = {}, reply, forwardedMessages = [], templateMessageId }) {
+	async startComposerSession({ commit, dispatch, getters }, {
+		type = 'imap',
+		data = {}, reply,
+		forwardedMessages = [],
+		templateMessageId,
+	}) {
 		if (reply) {
 			const original = await dispatch('fetchMessage', reply.data.databaseId)
 
@@ -357,14 +362,23 @@ export default {
 			}
 		}
 
-		commit('showMessageComposer', {
+		commit('startComposerSession', {
 			type,
 			data,
 			forwardedMessages,
 			templateMessageId,
 		})
+		commit('showMessageComposer')
 	},
-	async closeMessageComposer({ commit }) {
+	async startOrContinueComposerSession({ commit, dispatch, getters }, data) {
+		if (getters.composerMessage) {
+			commit('showMessageComposer')
+		} else {
+			await dispatch('startComposerSession', data)
+		}
+	},
+	stopComposerSession({ commit }) {
+		commit('stopComposerSession')
 		commit('hideMessageComposer')
 	},
 	async fetchEnvelope({ commit, getters }, id) {

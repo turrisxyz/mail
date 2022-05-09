@@ -1,8 +1,9 @@
 <template>
 	<Modal
+		v-if="$store.getters.showMessageComposer"
 		size="normal"
 		:title="modalTitle"
-		@close="$emit('close')">
+		@close="$store.commit('hideMessageComposer')">
 		<Composer
 			:from-account="composerData.accountId"
 			:to="composerData.to"
@@ -17,8 +18,15 @@
 			:draft="saveDraft"
 			:send="sendMessage"
 			:forwarded-messages="forwardedMessages"
-			@discard-draft="discardDraft"
-			@close="$emit('close')" />
+			@update:from-account="(accountId) => $store.commit('patchComposerData', { accountId })"
+			@update:to="(to) => $store.commit('patchComposerData', { to })"
+			@update:cc="(cc) => $store.commit('patchComposerData', { cc })"
+			@update:bcc="(bcc) => $store.commit('patchComposerData', { bcc })"
+			@update:subject="(subject) => $store.commit('patchComposerData', { subject })"
+			@update:body="(body) => $store.commit('patchComposerData', { body })"
+			@update:attachments="(attachments) => $store.commit('patchComposerData', { attachments })"
+			@update:send-at="(sendAt) => $store.commit('patchComposerData', { sendAt })"
+			@discard-draft="discardDraft" />
 	</Modal>
 </template>
 <script>
@@ -147,7 +155,8 @@ export default {
 				this.$store.commit('removeEnvelope', { id: data.draftId })
 				this.$store.commit('removeMessage', { id: data.draftId })
 			}
-			this.$emit('close')
+
+			await this.$store.dispatch('stopComposerSession')
 		},
 		recipientToRfc822(recipient) {
 			if (recipient.email === recipient.label) {
@@ -169,7 +178,9 @@ export default {
 			if (isOutbox) {
 				id = this.composerMessage.data.id
 			}
-			this.$emit('close')
+
+			await this.$store.dispatch('stopComposerSession')
+
 			try {
 				if (isOutbox) {
 					await this.$store.dispatch('outbox/deleteMessage', { id })

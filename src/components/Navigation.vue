@@ -22,10 +22,10 @@
 <template>
 	<AppNavigation>
 		<AppNavigationNew
-			:text="t('mail', 'New message')"
+			:text="newMessageButtonText"
 			:disabled="$store.getters.showMessageComposer"
 			button-id="mail_new_message"
-			button-class="icon-add"
+			:button-class="hasComposerSession ? 'icon-drafts' : 'icon-add'"
 			role="complementary"
 			@click="onNewMessage" />
 		<button v-if="currentMailbox"
@@ -151,6 +151,19 @@ export default {
 		unifiedMailboxes() {
 			return this.$store.getters.getMailboxes(UNIFIED_ACCOUNT_ID)
 		},
+		/**
+		 * @returns {boolean} True if there is a composer session running
+		 */
+		hasComposerSession() {
+			return !!this.$store.getters.composerMessage
+		},
+		newMessageButtonText() {
+			if (this.hasComposerSession) {
+				return t('mail', 'Continue editing message')
+			}
+
+			return t('mail', 'New message')
+		},
 	},
 	methods: {
 		isCollapsed(account, mailbox) {
@@ -168,10 +181,8 @@ export default {
 
 			return true
 		},
-		onNewMessage() {
-			this.$store.dispatch('showMessageComposer', {
-
-			})
+		async onNewMessage() {
+			await this.$store.dispatch('startOrContinueComposerSession', {})
 		},
 		isFirst(account) {
 			const accounts = this.$store.getters.accounts

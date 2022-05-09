@@ -5,7 +5,7 @@
 		<MailboxThread v-else-if="activeAccount"
 			:account="activeAccount"
 			:mailbox="activeMailbox" />
-		<NewMessageModal v-if="$store.getters.showMessageComposer" @close="$store.dispatch('closeMessageComposer')" />
+		<NewMessageModal />
 	</Content>
 </template>
 

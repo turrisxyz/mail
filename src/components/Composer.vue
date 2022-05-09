@@ -23,7 +23,7 @@
 			<Multiselect
 				id="to"
 				ref="toLabel"
-				v-model="selectTo"
+				:value="selectTo"
 				:options="selectableRecipients"
 				:taggable="true"
 				label="label"
@@ -32,13 +32,12 @@
 				:multiple="true"
 				:placeholder="t('mail', 'Contact or email address …')"
 				:clear-on-select="true"
-				:close-on-select="false"
 				:show-no-options="false"
 				:preserve-search="true"
-				:hide-selected="true"
 				:loading="loadingIndicatorTo"
-				@input="callSaveDraft(true, getMessageData)"
+				@select="onNewToAddr"
 				@tag="onNewToAddr"
+				@remove="onRemoveToAddr"
 				@search-change="onAutocomplete($event, 'to')" />
 			<a v-if="!showCC"
 				class="copy-toggle"
@@ -53,7 +52,7 @@
 			</label>
 			<Multiselect
 				id="cc"
-				v-model="selectCc"
+				:value="selectCc"
 				:options="selectableRecipients"
 				:taggable="true"
 				label="label"
@@ -64,8 +63,9 @@
 				:show-no-options="false"
 				:preserve-search="true"
 				:loading="loadingIndicatorCc"
-				@input="callSaveDraft(true, getMessageData)"
+				@select="onNewCcAddr"
 				@tag="onNewCcAddr"
+				@remove="onRemoveCcAddr"
 				@search-change="onAutocomplete($event, 'cc')">
 				<span slot="noOptions">{{ t('mail', 'No contacts found.') }}</span>
 			</Multiselect>
@@ -76,18 +76,20 @@
 			</label>
 			<Multiselect
 				id="bcc"
-				v-model="selectBcc"
+				:value="selectBcc"
 				:options="selectableRecipients"
 				:taggable="true"
 				label="label"
 				track-by="email"
 				:multiple="true"
 				:placeholder="t('mail', '')"
+				:clear-on-select="true"
 				:show-no-options="false"
 				:preserve-search="true"
 				:loading="loadingIndicatorBcc"
-				@input="callSaveDraft(true, getMessageData)"
+				@select="onNewBccAddr"
 				@tag="onNewBccAddr"
+				@remove="onRemoveBccAddr"
 				@search-change="onAutocomplete($event, 'bcc')">
 				<span slot="noOptions">{{ t('mail', 'No contacts found.') }}</span>
 			</Multiselect>
@@ -104,7 +106,7 @@
 				class="subject"
 				autocomplete="off"
 				:placeholder="t('mail', 'Subject …')"
-				@input="callSaveDraft(true, getMessageData)">
+				@input="onSubjectChange">
 		</div>
 		<div v-if="noReply" class="warning noreply-warning">
 			{{ t('mail', 'This message came from a noreply address so your reply will probably not be read.') }}
@@ -127,7 +129,7 @@
 				:placeholder="t('mail', 'Write message …')"
 				:focus="isReply"
 				:bus="bus"
-				@input="callSaveDraft(true, getMessageData)" />
+				@input="onInputChanged" />
 			<TextEditor
 				v-else-if="!encrypt && !editorPlainText"
 				key="editor-rich"
@@ -505,9 +507,10 @@ export default {
 		selectedDate.setHours(selectedDate.getHours() + 1)
 
 		return {
-			showCC: this.cc.length > 0,
+			console: window.console,
+			showCC: this.cc.length > 0 || this.bcc.length > 0,
 			selectedAlias: NO_ALIAS_SET, // Fixed in `beforeMount`
-			autocompleteRecipients: this.to.concat(this.cc).concat(this.bcc),
+			autocompleteRecipients: [...this.to, ...this.cc, ...this.bcc],
 			newRecipients: [],
 			subjectVal: this.subject,
 			bodyVal,
@@ -521,9 +524,9 @@ export default {
 			state: STATES.EDITING,
 			errorText: undefined,
 			STATES,
-			selectTo: this.to,
-			selectCc: this.cc,
-			selectBcc: this.bcc,
+			selectTo: [...this.to],
+			selectCc: [...this.cc],
+			selectBcc: [...this.bcc],
 			bus: new Vue(),
 			encrypt: false,
 			mailvelope: {
@@ -593,9 +596,7 @@ export default {
 			return this.$store.getters.getPreference('attachment-size-limit')
 		},
 		selectableRecipients() {
-			return this.newRecipients
-				.concat(this.autocompleteRecipients)
-				.map((recipient) => ({ ...recipient, label: recipient.label || recipient.email }))
+			return uniqBy('email')([...this.newRecipients, ...this.autocompleteRecipients])
 		},
 		isForward() {
 			return this.forwardFrom !== undefined
@@ -872,6 +873,7 @@ export default {
 				this.bus.$emit('insertSignature', signatureValue, this.selectedAlias.signatureAboveQuote)
 				this.appendSignature = false
 			}
+			this.$emit('update:body', plain(this.bodyVal))
 		},
 		// needs to bypass an input event of the first initialisation, because of:
 		// an empty body (e.g "") does not trigger an onInput event.
@@ -879,11 +881,13 @@ export default {
 		onEditorRichInputText() {
 			if (this.editorRichInputTextReady) {
 				this.callSaveDraft(true, this.getMessageData)
+				this.$emit('update:body', this.encrypt ? plain(this.bodyVal) : html(this.bodyVal))
 			}
 			this.editorRichInputTextReady = true
 		},
 		onChangeSendLater(value) {
 			this.sendAtVal = value ? Number.parseInt(value, 10) : undefined
+			this.$emit('update:send-at', this.sendAtVal / 1000)
 		},
 		convertToLocalDate(timestamp) {
 			const options = {
@@ -899,6 +903,7 @@ export default {
 			this.selectedAlias = alias
 			this.appendSignature = true
 			this.onInputChanged()
+			this.$emit('update:from-account', this.selectedAlias.id)
 		},
 		onAddLocalAttachment() {
 			this.bus.$emit('onAddLocalAttachment')
@@ -926,6 +931,14 @@ export default {
 				} else if (loadingIndicator === 'bcc') {
 					this.loadingIndicatorBcc = false
 				}
+
+				// Search results might not have labels
+				for (const result of results) {
+					if (!result.label) {
+						result.label = result.email
+					}
+				}
+
 				this.autocompleteRecipients = uniqBy('email')(this.autocompleteRecipients.concat(results))
 			})
 		},
@@ -933,6 +946,7 @@ export default {
 			this.attachmentsPromise = this.attachmentsPromise
 				.then(() => uploaded)
 				.then(() => this.callSaveDraft(true, this.getMessageData))
+				.then(() => this.$emit('update:attachments', this.attachments))
 				.catch((error) => logger.error('could not upload attachments', { error }))
 				.then(() => logger.debug('attachments uploaded'))
 		},
@@ -949,21 +963,48 @@ export default {
 		},
 		onNewToAddr(addr) {
 			this.onNewAddr(addr, this.selectTo)
+			this.$emit('update:to', this.selectTo)
 		},
 		onNewCcAddr(addr) {
 			this.onNewAddr(addr, this.selectCc)
+			this.$emit('update:cc', this.selectCc)
 		},
 		onNewBccAddr(addr) {
 			this.onNewAddr(addr, this.selectBcc)
+			this.$emit('update:bcc', this.selectBcc)
 		},
 		onNewAddr(addr, list) {
-			const res = {
-				label: addr, // TODO: parse if possible
-				email: addr, // TODO: parse if possible
+			// Autocomplete search results are passed as objects
+			let res = addr
+			if (typeof addr === 'string') {
+				res = {
+					label: addr, // TODO: parse if possible
+					email: addr, // TODO: parse if possible
+				}
 			}
+
 			this.newRecipients.push(res)
 			list.push(res)
 			this.callSaveDraft(true, this.getMessageData)
+		},
+		onRemoveToAddr(addr) {
+			this.selectTo = this.selectTo.filter(to => to.email !== addr.email)
+			this.callSaveDraft(true, this.getMessageData)
+			this.$emit('update:to', this.selectTo)
+		},
+		onRemoveCcAddr(addr) {
+			this.selectCc = this.selectCc.filter(cc => cc.email !== addr.email)
+			this.callSaveDraft(true, this.getMessageData)
+			this.$emit('update:cc', this.selectCc)
+		},
+		onRemoveBccAddr(addr) {
+			this.selectBcc = this.selectBcc.filter(bcc => bcc.email !== addr.email)
+			this.callSaveDraft(true, this.getMessageData)
+			this.$emit('update:bcc', this.selectBcc)
+		},
+		onSubjectChange() {
+			this.callSaveDraft(true, this.getMessageData)
+			this.$emit('update:subject', this.subjectVal)
 		},
 		async onSend(_, force = false) {
 			if (this.encrypt) {
