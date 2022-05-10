@@ -156,9 +156,9 @@
 		<div class="composer-actions-right composer-actions">
 			<div class="composer-actions--primary-actions">
 				<p class="composer-actions-draft-status">
-					<span v-if="savingDraft === true" class="draft-status">{{ t('mail', 'Saving draft …') }}</span>
-					<span v-else-if="!canSaveDraft" class="draft-status">{{ t('mail', 'Error saving draft') }}</span>
-					<span v-else-if="savingDraft === false" class="draft-status">{{ t('mail', 'Draft saved') }}</span>
+					<span v-if="savingDraft" class="draft-status">{{ t('mail', 'Saving draft …') }}</span>
+					<span v-else-if="!savingDraft && !canSaveDraft" class="draft-status">{{ t('mail', 'Error saving draft') }}</span>
+					<span v-else-if="!savingDraft && draftSaved" class="draft-status">{{ t('mail', 'Draft saved') }}</span>
 				</p>
 				<VButton v-if="!savingDraft && !canSaveDraft"
 					class="button"
@@ -168,7 +168,7 @@
 						<Download :size="20" :title="t('mail', 'Save draft')" />
 					</template>
 				</VButton>
-				<VButton v-if="savingDraft === false"
+				<VButton v-if="draftSaved"
 					class="button"
 					type="tertiary"
 					@click="discardDraft">
@@ -470,6 +470,10 @@ export default {
 			type: Function,
 			required: true,
 		},
+		draftSaved: {
+			type: Boolean,
+			required: true,
+		},
 		replyTo: {
 			type: Object,
 			required: false,
@@ -519,8 +523,8 @@ export default {
 			draftsPromise: Promise.resolve(this.draftId),
 			attachmentsPromise: Promise.resolve(),
 			canSaveDraft: true,
-			savingDraft: undefined,
-			saveDraftDebounced: debounce(10 * 1000, this.saveDraft),
+			savingDraft: false,
+			saveDraftDebounced: debounce(200, this.saveDraft),
 			state: STATES.EDITING,
 			errorText: undefined,
 			STATES,
@@ -812,6 +816,7 @@ export default {
 		},
 		saveDraft(data) {
 			this.savingDraft = true
+			this.$emit('update:draft-saved', false)
 			this.draftsPromise = this.draftsPromise
 				.then((id) => {
 					const draftData = data(id)
@@ -836,6 +841,7 @@ export default {
 				.then((uid) => {
 					// It works (again)
 					this.canSaveDraft = true
+					this.$emit('update:draft-saved', true)
 
 					return uid
 				})

@@ -91,6 +91,7 @@ export default new Vuex.Store({
 				messages: {},
 				newMessage: undefined,
 				showMessageComposer: false,
+				composerMessageIsSaved: false,
 				autocompleteEntries: [],
 				tags: {},
 				tagList: [],

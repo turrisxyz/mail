@@ -181,6 +181,15 @@ export default {
 		}
 		removeRec(account)
 	},
+	/**
+	 * Start a new composer session and open the modal.
+	 *
+	 * @param {object} state Vuex state
+	 * @param {object} payload Data destructuring object
+	 * @param {string} payload.type Either 'outbox' or 'imap'
+	 * @param {object} payload.data Composer message data
+	 * @param {number[]} payload.forwardedMessages Envelope id to be forwarded
+	 */
 	startComposerSession(state, { type, data, forwardedMessages }) {
 		state.newMessage = {
 			type,
@@ -189,19 +198,52 @@ export default {
 				forwardedMessages,
 			},
 		}
+		state.showMessageComposer = true
 	},
+	/**
+	 * Stop current composer session and close the modal.
+	 * This discards all data from the current message.
+	 *
+	 * @param {object} state Vuex state
+	 */
 	stopComposerSession(state) {
 		state.newMessage = undefined
+		state.showMessageComposer = false
+	},
+	/**
+	 * Show composer modal if there is an ongoing session.
+	 *
+	 * @param {object} state Vuex state
+	 */
+	showMessageComposer(state) {
+		if (state.newMessage) {
+			state.showMessageComposer = true
+		}
+	},
+	/**
+	 * Hide composer modal without ending the current session.
+	 *
+	 * @param {object} state Vuex state
+	 */
+	hideMessageComposer(state) {
+		state.showMessageComposer = false
+	},
+	/**
+	 * Partially update message data of current composer session.
+	 *
+	 * @param {object} state Vuex state
+	 * @param {object} data Partial composer message data
+	 */
+	patchComposerData(state, data) {
+		console.log('patchComposerData', { current: JSON.stringify(state.newMessage.data), new: JSON.stringify(data) })
+		Vue.set(state.newMessage, 'data', Object.assign(state.newMessage.data, data))
+	},
+	setComposerMessageSaved(state, saved) {
+		state.composerMessageIsSaved = saved
 	},
 	convertComposerMessageToOutbox(state, { message }) {
 		Vue.set(state.newMessage, 'type', 'outbox')
 		Vue.set(state.newMessage.data, 'id', message.id)
-	},
-	showMessageComposer(state) {
-		state.showMessageComposer = true
-	},
-	hideMessageComposer(state) {
-		state.showMessageComposer = false
 	},
 	addEnvelope(state, { query, envelope, addToUnifiedMailboxes = true }) {
 		normalizeTags(state, envelope)
@@ -371,9 +413,5 @@ export default {
 	},
 	setScheduledSendingDisabled(state, value) {
 		state.isScheduledSendingDisabled = value
-	},
-	patchComposerData(state, data) {
-		console.log('patchComposerData', { current: JSON.stringify(state.newMessage.data), new: JSON.stringify(data) })
-		Vue.set(state.newMessage, 'data', Object.assign(state.newMessage.data, data))
 	},
 }

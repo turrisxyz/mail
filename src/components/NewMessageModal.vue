@@ -18,14 +18,16 @@
 			:draft="saveDraft"
 			:send="sendMessage"
 			:forwarded-messages="forwardedMessages"
-			@update:from-account="(accountId) => $store.commit('patchComposerData', { accountId })"
-			@update:to="(to) => $store.commit('patchComposerData', { to })"
-			@update:cc="(cc) => $store.commit('patchComposerData', { cc })"
-			@update:bcc="(bcc) => $store.commit('patchComposerData', { bcc })"
-			@update:subject="(subject) => $store.commit('patchComposerData', { subject })"
-			@update:body="(body) => $store.commit('patchComposerData', { body })"
-			@update:attachments="(attachments) => $store.commit('patchComposerData', { attachments })"
-			@update:send-at="(sendAt) => $store.commit('patchComposerData', { sendAt })"
+			:draft-saved="$store.getters.composerMessageIsSaved"
+			@update:from-account="(accountId) => patchComposerData({ accountId })"
+			@update:to="(to) => patchComposerData({ to })"
+			@update:cc="(cc) => patchComposerData({ cc })"
+			@update:bcc="(bcc) => patchComposerData({ bcc })"
+			@update:subject="(subject) => patchComposerData({ subject })"
+			@update:body="(body) => patchComposerData({ body })"
+			@update:attachments="(attachments) => patchComposerData({ attachments })"
+			@update:send-at="(sendAt) => patchComposerData({ sendAt })"
+			@update:draft-saved="(saved) => $store.commit('setComposerMessageSaved', saved)"
 			@discard-draft="discardDraft" />
 	</Modal>
 </template>
@@ -192,6 +194,14 @@ export default {
 				console.error(error)
 				showError(t('mail', 'Could not discard message'))
 			}
+		},
+		/**
+		 * Patch composer data in global state.
+		 *
+		 * @param {object} data Partial message data object that will be passed to the mutation
+		 */
+		patchComposerData(data) {
+			this.$store.commit('patchComposerData', data)
 		},
 	},
 }

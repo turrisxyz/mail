@@ -439,7 +439,7 @@ export default {
 		},
 		async forwardSelectedAsAttachment() {
 			this.forwardedMessages = this.selection
-			await this.$store.dispatch('showMessageComposer', {
+			await this.$store.dispatch('startComposerSession', {
 				forwardedMessages: this.forwardedMessages,
 			})
 			this.forwardedMessages = []

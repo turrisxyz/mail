@@ -65,6 +65,9 @@ export const getters = {
 	composerMessageOptions: (state) => {
 		return state.newMessage?.options
 	},
+	composerMessageIsSaved: (state) => {
+		return state.composerMessageIsSaved
+	},
 	getEnvelope: (state) => (id) => {
 		return state.envelopes[id]
 	},

@@ -265,9 +265,21 @@ export default {
 			updated,
 		})
 	},
+	/**
+	 * Start a new composer session and open the modal.
+	 *
+	 * @param {object} context Vuex context
+	 * @param {object} payload Data destructuring object
+	 * @param {string} payload.type Either 'outbox' or 'imap'
+	 * @param {object} payload.data Composer message data
+	 * @param {{mode: string, data: object}} payload.reply Reply data
+	 * @param {number[]} payload.forwardedMessages Envelope id to be forwarded
+	 * @param {number} payload.templateMessageId Envelope id to copy data from and edit
+	 */
 	async startComposerSession({ commit, dispatch, getters }, {
 		type = 'imap',
-		data = {}, reply,
+		data = {},
+		reply,
 		forwardedMessages = [],
 		templateMessageId,
 	}) {
@@ -289,7 +301,7 @@ export default {
 
 			if (reply.mode === 'reply') {
 				logger.debug('Show simple reply composer', { reply })
-				commit('showMessageComposer', {
+				commit('startComposerSession', {
 					data: {
 						accountId: reply.data.accountId,
 						to: reply.data.from,
@@ -308,7 +320,7 @@ export default {
 					email: account.emailAddress,
 					label: account.name,
 				})
-				commit('showMessageComposer', {
+				commit('startComposerSession', {
 					data: {
 						accountId: reply.data.accountId,
 						to: recipients.to,
@@ -322,7 +334,7 @@ export default {
 				return
 			} else if (reply.mode === 'forward') {
 				logger.debug('Show forward composer', { reply })
-				commit('showMessageComposer', {
+				commit('startComposerSession', {
 					data: {
 						accountId: reply.data.accountId,
 						to: [],
@@ -368,8 +380,14 @@ export default {
 			forwardedMessages,
 			templateMessageId,
 		})
-		commit('showMessageComposer')
 	},
+	/**
+	 * Start a new composer session if not ongoing.
+	 * Always opens the composer modal.
+	 *
+	 * @param {object} context Vuex context
+	 * @param {object} data See startComposerSession()
+	 */
 	async startOrContinueComposerSession({ commit, dispatch, getters }, data) {
 		if (getters.composerMessage) {
 			commit('showMessageComposer')
@@ -377,9 +395,14 @@ export default {
 			await dispatch('startComposerSession', data)
 		}
 	},
+	/**
+	 * Stop current composer session and close the modal.
+	 * This discards all data from the current message.
+	 *
+	 * @param {object} context Vuex context
+	 */
 	stopComposerSession({ commit }) {
 		commit('stopComposerSession')
-		commit('hideMessageComposer')
 	},
 	async fetchEnvelope({ commit, getters }, id) {
 		const cached = getters.getEnvelope(id)

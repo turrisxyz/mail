@@ -352,7 +352,7 @@ export default {
 		},
 		onClick() {
 			if (this.draft) {
-				this.$store.dispatch('showMessageComposer', {
+				this.$store.dispatch('startComposerSession', {
 					data: {
 						...this.data,
 						draftId: this.data.databaseId,
@@ -399,7 +399,7 @@ export default {
 			}
 		},
 		async onOpenEditAsNew() {
-			await this.$store.dispatch('showMessageComposer', {
+			await this.$store.dispatch('startComposerSession', {
 				templateMessageId: this.data.databaseId,
 				data: this.data,
 			})
