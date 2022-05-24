@@ -25,7 +25,7 @@
 			:text="newMessageButtonText"
 			:disabled="$store.getters.showMessageComposer"
 			button-id="mail_new_message"
-			:button-class="hasComposerSession ? 'icon-drafts' : 'icon-add'"
+			:button-class="hasComposerSession ? ['icon-drafts', 'primary'] : ['icon-add']"
 			role="complementary"
 			@click="onNewMessage" />
 		<button v-if="currentMailbox"
