@@ -73,7 +73,7 @@
 				<Moment class="timestamp" :timestamp="envelope.dateInt" />
 				<Button
 					:class="{ primary: expanded}"
-					class="button"
+					type="primary"
 					@click="onReply">
 					<template #icon>
 						<ReplyAllIcon v-if="hasMultipleRecipients"
@@ -105,7 +105,7 @@
 </template>
 <script>
 import Avatar from './Avatar'
-import Button from '@nextcloud/vue/src/components/Button'
+import Button from '@nextcloud/vue/dist/Components/Button'
 import Error from './Error'
 import importantSvg from '../../img/important.svg'
 import Loading from './Loading'
