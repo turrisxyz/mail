@@ -146,8 +146,12 @@ class Manager {
 	 *
 	 * @throws \OCP\DB\Exception
 	 */
-	private function createNewAliases(string $userId, int $accountId, array $newAliases, string $displayName): void {
+	private function createNewAliases(string $userId, int $accountId, string $accountEmail, array $newAliases, string $displayName): void {
 		foreach ($newAliases as $newAlias) {
+			if ($newAlias === $accountEmail) {
+				continue; // skip alias when identical to account email
+			}
+
 			try {
 				$this->aliasMapper->findByAlias($newAlias, $userId);
 			} catch (DoesNotExistException $e) {
@@ -236,7 +240,7 @@ class Manager {
 			}
 
 			try {
-				$this->createNewAliases($user->getUID(), $mailAccount->getId(), $provisioning->getAliases(), $user->getDisplayName());
+				$this->createNewAliases($user->getUID(), $mailAccount->getId(), $mailAccount->getEmail(), $provisioning->getAliases(), $user->getDisplayName());
 			} catch (\Throwable $e) {
 				$this->logger->warning('Creating new aliases failed', ['exception' => $e]);
 			}
